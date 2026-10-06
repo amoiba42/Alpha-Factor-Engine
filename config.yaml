@@ -1,0 +1,81 @@
+# Alpha-Factor-Engine research configuration.
+# Every parameter that affects results lives here. Changing a value changes the experiment.
+
+seed: 42
+
+paths:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  figures_dir: results/figures
+  tables_dir: results/tables
+  report: results/RESULTS.md
+
+data:
+  start: "2006-01-01"         # first price date downloaded (includes feature warm-up)
+  end: "2025-12-31"           # last price date (inclusive). Fixed for reproducibility.
+  benchmark: SPY              # market proxy for beta and Information Ratio
+  # Point-in-time S&P 500 membership (github.com/fja05680/sp500), pinned to a commit.
+  membership_url: "https://raw.githubusercontent.com/fja05680/sp500/a2430f2af0c79ddf0748e91de11bdeb1616ab5a7/S%26P%20500%20Historical%20Components%20%26%20Changes%20(Updated).csv"
+  download_batch_size: 50
+
+cleaning:
+  max_abs_daily_return: 0.75  # |return| above this is treated as a data error and set to NaN
+  # No minimum-price rule: Yahoo prices are split-adjusted, so early prices of later-split
+  # stocks (e.g. NVDA ~$0.5 in 2006) are far below what actually traded.
+
+universe:
+  point_in_time_membership: true   # only trade a stock on dates it was an S&P 500 member
+  # No price filter (split-adjusted prices are not traded prices; all names are index members).
+  min_adv_usd: 10_000_000          # trailing median daily dollar volume, through t
+  adv_window: 20
+  min_history: 252                 # valid return observations required before a stock is eligible
+
+splits:
+  # Chronological. Test is untouched until all research decisions are frozen.
+  train: ["2007-01-01", "2015-12-31"]
+  validation: ["2016-01-01", "2019-12-31"]
+  test: ["2020-01-01", "2025-12-31"]
+  run_test: false             # set true only after the configuration is frozen
+
+factors:
+  # Candidate lookbacks. The one used is chosen by validation Rank IC at `selection_horizon`.
+  reversal_windows: [1, 5]
+  momentum_windows: [20, 60, 120]
+  momentum_skip: 5            # skip most recent days so momentum does not overlap reversal
+  volatility_windows: [20, 60]
+  # Economic prior on sign: final signal = direction * standardized factor.
+  directions:
+    reversal: -1              # raw factor = past return; reversal bets against it
+    momentum: 1
+    volatility: -1            # low-volatility anomaly: low vol expected to outperform
+
+preprocessing:
+  winsor_lower: 0.01
+  winsor_upper: 0.99
+  transform: zscore           # zscore | rank (rank -> rank-gaussianized, unit-scale)
+  z_clip: 3.0
+
+evaluation:
+  horizons: [1, 5, 10, 20]
+  selection_horizon: 5        # horizon used for lookback selection and as the Ridge target
+
+model:
+  ridge_alphas: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0]
+  refit_on_train_plus_validation: true
+
+portfolio:
+  # Design variants evaluated on validation (ensemble net Sharpe); the best is used downstream.
+  # Grid added after the first train/validation run, before any test evaluation (README timeline).
+  rebalance_every_candidates: [5, 10, 20]   # trading days between rebalances
+  beta_neutral_candidates: [false, true]    # residualize signals on trailing 252d beta to SPY
+  execution_lag: 1            # days between signal date (close t) and trade (close t+lag)
+  quantile: 0.2               # long top 20%, short bottom 20%
+  weighting: equal            # equal | signal
+  gross_exposure: 1.0         # sum |w| ; long 0.5, short -0.5
+
+costs:
+  # Charged per dollar traded (one-way), deducted from returns on the trade date.
+  commission_bps: 1.0
+  spread_bps: 2.0             # half-spread paid crossing the market
+  slippage_bps: 3.0           # simulated execution slippage / market impact
+  sensitivity_total_bps: [0, 5, 10, 20, 40]
