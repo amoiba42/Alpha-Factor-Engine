@@ -1,0 +1,20 @@
+|                                     | raw        | clean      |
+|:------------------------------------|:-----------|:-----------|
+| rows                                | 2877869    | 2877771    |
+| tickers                             | 648        | 648        |
+| dates                               | 5031       | 5031       |
+| first_date                          | 2006-01-03 | 2006-01-03 |
+| last_date                           | 2025-12-31 | 2025-12-31 |
+| duplicate_rows                      | 0          | 0          |
+| missing_adj_close                   | 0          | 0          |
+| missing_ohlc                        | 0          | 0          |
+| missing_volume                      | 0          | 0          |
+| zero_volume                         | 10447      | 10447      |
+| non_positive_prices                 | 0          | 0          |
+| high_below_low                      | 0          | 0          |
+| close_outside_range                 | 0          | 0          |
+| abs_return_gt_25pct                 | 1834       | 1812       |
+| abs_return_gt_50pct                 | 271        | 253        |
+| dividend_or_split_adjustment_events | 32440      | 32440      |
+| tickers_lt_252_obs                  | 8          | 8          |
+| median_obs_per_ticker               | 5031.0     | 5031.0     |
